@@ -137,8 +137,38 @@ def format_rag_sft(query: str, contexts: List[str], answer: str,
 # HF streaming loaders (import datasets lazily; used by train.py on the Spark)
 # ----------------------------------------------------------------------------
 
+# ----------------------------------------------------------------------------
+# Preflight: HF streaming needs compression codecs (fail fast, clear message)
+# ----------------------------------------------------------------------------
+
+def check_streaming_codecs() -> None:
+    """Verify zstd/lz4 codecs exist before opening streaming datasets.
+
+    Without these, `datasets` streaming dies deep inside fsspec with
+    `ValueError: Compression type zstd not supported`. Raise a helpful
+    error instead.
+    """
+    missing = []
+    try:
+        import zstandard  # noqa: F401
+    except ImportError:
+        missing.append("zstandard")
+    try:
+        import lz4.frame  # noqa: F401
+    except ImportError:
+        missing.append("lz4")
+    if missing:
+        raise RuntimeError(
+            "Missing streaming codec(s): " + ", ".join(missing) + ". "
+            "mLLM datasets (FineWeb-Edu, DCLM, ...) are zstd/lz4 compressed. "
+            "Install with: pip install " + " ".join(missing) +
+            '  (or the full stack: pip install -e ".[train]")'
+        )
+
+
 def stream_hf_texts(hf_path: str, hf_name: Optional[str], text_field: str,
                     split: str = "train", seed: int = 0):
+    check_streaming_codecs()
     import datasets
     ds = datasets.load_dataset(hf_path, hf_name, split=split, streaming=True)
     ds = ds.shuffle(seed=seed, buffer_size=10_000)

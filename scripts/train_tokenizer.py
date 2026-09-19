@@ -33,6 +33,8 @@ def main():
     ap.add_argument("--config", default="configs/tokenizer.yaml")
     args = ap.parse_args()
     cfg = yaml.safe_load(open(args.config))
+    from mllm.data import check_streaming_codecs
+    check_streaming_codecs()  # fail fast if zstd/lz4 codecs are missing
     from mllm.tokenizer import train_bpe_tokenizer
     tok = train_bpe_tokenizer(iter_texts(cfg), vocab_size=cfg.get("vocab_size", 32000),
                               save_dir=cfg.get("out", "tokenizer/"))

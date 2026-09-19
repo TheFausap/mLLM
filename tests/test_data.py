@@ -1,5 +1,6 @@
 from mllm.tokenizer import build_fallback_tokenizer
-from mllm.data import pack_sequences, format_sft, sample_mix, PRETRAIN_MIX
+from mllm.data import (pack_sequences, format_sft, sample_mix, PRETRAIN_MIX,
+                       check_streaming_codecs)
 import random
 
 
@@ -18,6 +19,16 @@ def test_sft_masking():
     assert enc["labels"][0] == -100  # bos masked
     assert any(l != -100 for l in enc["labels"])  # assistant supervised
     assert enc["input_ids"][-1] == tok.eos_id
+
+
+def test_check_streaming_codecs_message():
+    # Passes whether or not codecs are installed: either no raise, or a
+    # RuntimeError that tells the user exactly what to pip install.
+    try:
+        check_streaming_codecs()
+    except RuntimeError as e:
+        assert "pip install" in str(e)
+        assert "zstandard" in str(e) or "lz4" in str(e)
 
 
 def test_mix_weights_sum_to_one():

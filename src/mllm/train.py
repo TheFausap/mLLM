@@ -114,6 +114,8 @@ def main():
                 yield " ".join(f"word{rng.randint(0,999)}" for _ in range(200))
         stream = fake_stream()
     else:
+        from .data import check_streaming_codecs
+        check_streaming_codecs()  # fail fast if zstd/lz4 codecs are missing
         stream = mixed_pretrain_stream(mix, seed=tcfg.seed)
     batches = pretrain_batch_iter(stream, tok, tcfg.seq_len, batch_seqs)
 

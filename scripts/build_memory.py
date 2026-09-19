@@ -20,6 +20,8 @@ def main():
     args = ap.parse_args()
     cfg = yaml.safe_load(open(args.config))
 
+    from mllm.data import check_streaming_codecs
+    check_streaming_codecs()  # fail fast if zstd/lz4 codecs are missing
     import datasets
     from mllm.memory import DiskVectorStore, HybridRetriever
     try:

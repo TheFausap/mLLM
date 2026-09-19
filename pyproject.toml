@@ -20,6 +20,9 @@ train = [
   "tokenizers>=0.19",
   "safetensors>=0.4",
   "psutil",
+  "zstandard",   # required: FineWeb-Edu/DCLM stream zstd-compressed files
+  "lz4",         # required by some parquet shards
+  "pyarrow>=14",
 ]
 memory = [
   "rank-bm25",
