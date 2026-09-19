@@ -7,10 +7,13 @@ import yaml
 
 
 def iter_texts(cfg):
-    import datasets
+    from mllm.data import load_first_available
     for src in cfg["sources"]:
         print(f"[tok] streaming {src['hf']} ...", flush=True)
-        ds = datasets.load_dataset(src["hf"], src.get("name"), split="train", streaming=True)
+        configs = [src.get("name")] + list(src.get("fallbacks") or [])
+        ds, used = load_first_available(src["hf"], configs, "train",
+                                        need_field=src["field"])
+        print(f"[tok]   config: {used}", flush=True)
         n = 0
         for row in ds:
             if n >= src.get("n", 100000):

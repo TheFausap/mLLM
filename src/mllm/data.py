@@ -31,7 +31,7 @@ PRETRAIN_MIX: List[MixItem] = [
     MixItem("HuggingFaceTB/cosmopedia", "web_samples_v2", "text", 0.15, "synthetic textbooks (Phi-style)"),
     MixItem("HuggingFaceTB/smollm-corpus", "cosmopedia-v2", "text", 0.05, "stories+textbooks"),
     MixItem("open-web-math/open-web-math", None, "text", 0.05, "math reasoning"),
-    MixItem("bigcode/starcoderdata", None, "content", 0.05, "code, light dose"),
+    MixItem("bigcode/starcoderdata", "python", "content", 0.05, "code, light dose"),
 ]
 
 ANNEAL_MIX: List[MixItem] = [
@@ -39,7 +39,7 @@ ANNEAL_MIX: List[MixItem] = [
     MixItem("HuggingFaceFW/fineweb-edu", None, "text", 0.30, "edu web"),
     MixItem("HuggingFaceTB/smollm-corpus", "smoltalk", "text", 0.20, "conversational pretrain"),
     MixItem("open-web-math/open-web-math", None, "text", 0.10, "math"),
-    MixItem("bigcode/starcoderdata", None, "content", 0.10, "code"),
+    MixItem("bigcode/starcoderdata", "python", "content", 0.10, "code"),
 ]
 
 SFT_SOURCES: List[str] = [
@@ -188,6 +188,68 @@ def mixed_pretrain_stream(mix: Sequence[MixItem], seed: int = 0) -> Iterator[str
             yield next(iters[m.hf_path + (m.hf_name or "")])
         except StopIteration:
             continue
+
+
+# ----------------------------------------------------------------------------
+# Pre-flight probing: fail fast on wrong dataset/config/field names
+# ----------------------------------------------------------------------------
+
+def source_name(m: MixItem) -> str:
+    return f"{m.hf_path}:{m.hf_name or 'default'}[{m.text_field}]"
+
+
+def probe_source(m: MixItem, n_rows: int = 3) -> Dict:
+    """Try loading a streaming source and reading n_rows. Never raises."""
+    import time
+    t0 = time.time()
+    try:
+        it = stream_hf_texts(m.hf_path, m.hf_name, m.text_field, seed=0)
+        rows = [next(it) for _ in range(n_rows)]
+        return {"ok": True, "rows": len(rows),
+                "chars": sum(len(r) for r in rows),
+                "dt": round(time.time() - t0, 1)}
+    except Exception as e:
+        return {"ok": False, "error": f"{type(e).__name__}: {str(e)[:300]}",
+                "dt": round(time.time() - t0, 1)}
+
+
+def load_first_available(path: str, configs: Sequence[Optional[str]],
+                         split: str = "train", need_field: Optional[str] = None):
+    """Try dataset configs in order (streaming); return (dataset, config_used).
+
+    Probes one row to force resolution now, since streaming is lazy.
+    """
+    import datasets
+    errors = []
+    for cfg in configs:
+        try:
+            ds = datasets.load_dataset(path, cfg, split=split, streaming=True)
+            first = next(iter(ds))
+            if need_field and need_field not in first:
+                raise ValueError(f"config {cfg!r} has no {need_field!r} field")
+            ds = datasets.load_dataset(path, cfg, split=split, streaming=True)
+            return ds, cfg
+        except Exception as e:
+            errors.append(f"{cfg}: {type(e).__name__}: {str(e)[:150]}")
+    raise RuntimeError(f"no working config for {path} {list(configs)}: {errors}")
+
+
+def validate_mix(mix: Sequence[MixItem], label: str = "mix") -> None:
+    """Probe every source; raise with a clear report if any fail."""
+    bad = []
+    for m in mix:
+        r = probe_source(m)
+        name = source_name(m)
+        if r["ok"]:
+            print(f"[data] {label} OK   {name} "
+                  f"({r['chars']} chars in {r['dt']}s)", flush=True)
+        else:
+            print(f"[data] {label} FAIL {name}: {r['error']}", flush=True)
+            bad.append(name)
+    if bad:
+        raise RuntimeError(
+            f"{len(bad)} source(s) in {label} failed to load: {bad}. "
+            "Run `python scripts/check_data.py` for a full report.")
 
 
 # ----------------------------------------------------------------------------

@@ -17,10 +17,14 @@ Mix (`data.PRETRAIN_MIX`):
 |---|---|---|
 | FineWeb-Edu | 0.50 | best open high-signal web for small LMs |
 | DCLM-baseline | 0.20 | diversity / robustness |
-| Cosmopedia-v2 | 0.15 | synthetic textbooks — the Phi lesson: small models learn best from clean, didactic text |
-| SmolLM-Corpus (cosmopedia) | 0.05 | stories + textbooks |
+| Cosmopedia (`web_samples_v2`) | 0.15 | synthetic textbooks — the Phi lesson: small models learn best from clean, didactic text |
+| SmolLM-Corpus (`cosmopedia-v2`) | 0.05 | stories + textbooks |
 | Open-Web-Math | 0.05 | reasoning traces |
-| StarCoderData | 0.05 | light code dose (structure, not mastery) |
+| StarCoderData (`python`) | 0.05 | light code dose (structure, not mastery) |
+
+Validate every source before a long run: `python scripts/check_data.py`
+(probes all mixes + tokenizer sources; `--sft --memory` for the rest).
+`train.py` also probes the active mix at startup and aborts on failure.
 
 Hyperparams (150m): batch ~1M tokens, WSD peak LR 3e-3 → 3e-4, warmup 2k,
 AdamW (0.9, 0.95), wd 0.1, clip 1.0, z-loss 1e-4, bf16, torch.compile,

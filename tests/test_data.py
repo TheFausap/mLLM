@@ -31,6 +31,23 @@ def test_check_streaming_codecs_message():
         assert "zstandard" in str(e) or "lz4" in str(e)
 
 
+def test_mix_config_names_known_good():
+    # Regression test: cosmopedia has no 'v2' config (it's web_samples_v2, ...),
+    # starcoderdata needs an explicit language subset. See scripts/check_data.py
+    # for the live probe that runs on the Spark.
+    from mllm.data import ANNEAL_MIX
+    for m in list(PRETRAIN_MIX) + list(ANNEAL_MIX):
+        if m.hf_path == "HuggingFaceTB/cosmopedia":
+            assert m.hf_name in ("web_samples_v1", "web_samples_v2", "stories",
+                                 "stanford", "wikihow", "openstax",
+                                 "auto_math_text", "kunst-stories"), m
+        if m.hf_path == "bigcode/starcoderdata":
+            assert m.hf_name is not None and m.text_field == "content", m
+        if m.hf_path == "HuggingFaceTB/smollm-corpus":
+            assert m.hf_name in ("cosmopedia-v2", "fineweb-edu-dedup",
+                                 "python-edu", "smoltalk"), m
+
+
 def test_mix_weights_sum_to_one():
     assert abs(sum(m.weight for m in PRETRAIN_MIX) - 1.0) < 1e-9
     rng = random.Random(0)

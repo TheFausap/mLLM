@@ -66,22 +66,42 @@ def load_sft_rows(spec: str, tok, limit: int = 0) -> list:
     return rows
 
 
+def _norm_msgs(raw_msgs) -> list:
+    """Normalize [{role, content}] — use real roles when present."""
+    msgs = []
+    for i, m in enumerate(raw_msgs):
+        role = m.get("role", "")
+        if role not in ("user", "assistant", "system"):
+            role = "user" if i % 2 == 0 else "assistant"
+        content = m.get("content", "")
+        if isinstance(content, str) and content.strip():
+            msgs.append({"role": role, "content": content})
+    return msgs
+
+
 def load_hf_sft(name: str, limit: int = 0) -> list:
-    import datasets
+    from .data import load_first_available
     rows = []
     if name == "smoltalk":
-        ds = datasets.load_dataset("HuggingFaceTB/smoltalk", "everyday-conversations", split="train")
+        ds, used = load_first_available(
+            "HuggingFaceTB/smoltalk",
+            ["everyday-conversations", "smol-magpie-ultra", "long-conversations", "all"],
+            "train", need_field="messages")
+        print(f"[sft] smoltalk config: {used}", flush=True)
         for r in ds:
-            rows.append({"messages": [{"role": m["role"], "content": m["content"]} for m in r["messages"]]})
+            msgs = _norm_msgs(r["messages"])
+            if len(msgs) >= 2:
+                rows.append({"messages": msgs})
             if limit and len(rows) >= limit:
                 break
     elif name == "ultrachat":
-        ds = datasets.load_dataset("HuggingFaceH4/ultrachat_200k", split="train_sft")
+        import datasets
+        ds = datasets.load_dataset("HuggingFaceH4/ultrachat_200k", split="train_sft",
+                                   streaming=True)
         for r in ds:
-            msgs = []
-            for i, m in enumerate(r["messages"]):
-                msgs.append({"role": "user" if i % 2 == 0 else "assistant", "content": m["content"]})
-            rows.append({"messages": msgs})
+            msgs = _norm_msgs(r["messages"])
+            if len(msgs) >= 2:
+                rows.append({"messages": msgs})
             if limit and len(rows) >= limit:
                 break
     else:
