@@ -5,7 +5,7 @@ sources:
     field: text
     n: 400000
   - hf: HuggingFaceTB/cosmopedia
-    name: v2
+    name: web_samples_v2
     field: text
     n: 150000
   - hf: HuggingFaceTB/smoltalk
