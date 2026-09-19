@@ -1,0 +1,15 @@
+# Knowledge index build
+out: data/memory/knowledge
+embedder: BAAI/bge-small-en-v1.5   # 33M params, 384-dim; also try nomic-embed-text-v1.5
+dim: 384
+chunk_chars: 1200
+overlap_chars: 200
+sources:
+  - hf: wikimedia/wikipedia
+    name: 20231101.en
+    field: text
+    limit: 1500000        # ~1.5M articles -> ~6-8M chunks after splitting
+  - hf: HuggingFaceFW/fineweb-edu
+    field: text
+    limit: 2000000        # curated edu passages
+shard_size: 200000

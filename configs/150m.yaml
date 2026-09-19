@@ -1,0 +1,45 @@
+# mLLM 150m-class: the floor probe (~125M params)
+model: 150m
+model_overrides: {}
+
+# Stage 1: pretrain ~80B tokens. At ~40-60k tok/s on DGX Spark this is ~3 weeks.
+pretrain:
+  tokens_total: 80000000000
+  seq_len: 4096
+  batch_tokens: 1048576     # 256 packed seqs
+  peak_lr: 0.003
+  min_lr: 0.0003
+  warmup_steps: 2000
+  decay_frac: 0.10
+  weight_decay: 0.1
+  grad_clip: 1.0
+  z_loss: 0.0001
+  precision: bf16
+  grad_accum: 4             # tune so step fits in 128GB unified mem
+  checkpoint_every: 1000
+  eval_every: 500
+  log_every: 20
+  seed: 1337
+  compile: true
+  grad_checkpoint: false
+
+# Stage 2: anneal ~8B tokens on edu+conversational+RAG-grounded mix
+anneal:
+  tokens_total: 8000000000
+  seq_len: 4096
+  batch_tokens: 524288
+  peak_lr: 0.0006
+  min_lr: 0.00006
+  warmup_steps: 200
+  decay_frac: 0.5
+  weight_decay: 0.1
+  grad_clip: 1.0
+  z_loss: 0.0001
+  precision: bf16
+  grad_accum: 2
+  checkpoint_every: 500
+  eval_every: 250
+  log_every: 20
+  seed: 1338
+  compile: true
+  grad_checkpoint: false

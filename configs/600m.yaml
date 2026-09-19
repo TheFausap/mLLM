@@ -1,0 +1,43 @@
+# mLLM 600m-class: quality ceiling under 1B (~590M params)
+model: 600m
+model_overrides: {}
+
+pretrain:
+  tokens_total: 50000000000
+  seq_len: 4096
+  batch_tokens: 1048576
+  peak_lr: 0.0018
+  min_lr: 0.00018
+  warmup_steps: 2000
+  decay_frac: 0.10
+  weight_decay: 0.1
+  grad_clip: 1.0
+  z_loss: 0.0001
+  precision: bf16
+  grad_accum: 8
+  checkpoint_every: 1000
+  eval_every: 500
+  log_every: 20
+  seed: 1337
+  compile: true
+  grad_checkpoint: true
+
+anneal:
+  tokens_total: 8000000000
+  seq_len: 4096
+  batch_tokens: 524288
+  peak_lr: 0.0003
+  min_lr: 0.00003
+  warmup_steps: 200
+  decay_frac: 0.5
+  weight_decay: 0.1
+  grad_clip: 1.0
+  z_loss: 0.0001
+  precision: bf16
+  grad_accum: 4
+  checkpoint_every: 500
+  eval_every: 250
+  log_every: 20
+  seed: 1338
+  compile: true
+  grad_checkpoint: true

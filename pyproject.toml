@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mllm"
+version = "0.1.0"
+description = "mLLM — minimal conversational LLM under 1B params with disk-backed memory"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy",
+  "pyyaml",
+  "tqdm",
+]
+
+[project.optional-dependencies]
+train = [
+  "torch>=2.4",
+  "datasets>=2.19",
+  "tokenizers>=0.19",
+  "safetensors>=0.4",
+  "psutil",
+]
+memory = [
+  "rank-bm25",
+  "sentence-transformers",
+]
+eval = [
+  "scipy",
+]
+dev = [
+  "pytest",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+tokenizer/
+checkpoints/
+data/
+runs/
+*.db
+*.db-wal
+*.db-shm
+*.npy
+eval_results.json
+.DS_Store

@@ -1,0 +1,6 @@
+# Minimal install (serve + memory + tests): numpy, pyyaml, tqdm (see pyproject).
+# Full training stack on DGX Spark (ARM + CUDA Blackwell):
+#   pip install -e ".[train,memory,eval,dev]"
+# For a CUDA-enabled torch build use the official PyTorch install line for
+# your DGX OS / CUDA version first, then install this package.
+-e ".[train,memory,eval,dev]"
