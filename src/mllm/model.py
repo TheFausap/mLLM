@@ -11,6 +11,7 @@ from typing import Optional, Tuple, List, Dict
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
 
 from .config import ModelConfig
 
@@ -171,6 +172,7 @@ class mLLM(nn.Module):
         super().__init__()
         self.cfg = cfg
         self.tok_emb = nn.Embedding(cfg.vocab_size, cfg.hidden_size)
+        self.gradient_checkpointing = False
         self.layers = nn.ModuleList([Block(cfg, i) for i in range(cfg.num_layers)])
         self.final_norm = RMSNorm(cfg.hidden_size, cfg.rms_norm_eps)
         if cfg.tie_embeddings:
@@ -193,7 +195,12 @@ class mLLM(nn.Module):
         new_caches = [] if use_cache else None
         for i, layer in enumerate(self.layers):
             c = cache[i] if cache is not None else None
-            x, nc = layer(x, c, use_cache)
+            if self.gradient_checkpointing and self.training and torch.is_grad_enabled():
+                if cache is not None or use_cache:
+                    raise ValueError("Activation checkpointing does not support KV caching during training")
+                x, nc = checkpoint(layer, x, use_reentrant=False)
+            else:
+                x, nc = layer(x, c, use_cache)
             if use_cache:
                 new_caches.append(nc)
         h = self.final_norm(x)

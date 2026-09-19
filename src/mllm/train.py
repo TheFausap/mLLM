@@ -84,11 +84,10 @@ def main():
     assert len(tok) == mcfg.vocab_size, f"tokenizer {len(tok)} != model {mcfg.vocab_size}"
 
     model = mLLM(mcfg).to(device)
+    model.gradient_checkpointing = tcfg.grad_checkpoint
     print(f"[mllm] params: {count_params(model)}", flush=True)
     if tcfg.compile and hasattr(torch, "compile"):
         model = torch.compile(model)
-    if tcfg.grad_checkpoint:
-        model.gradient_checkpointing_enable = lambda: None  # placeholder for tiny models (fits w/o ckpt)
 
     opt = torch.optim.AdamW(model.parameters(), lr=tcfg.peak_lr,
                             betas=(tcfg.beta1, tcfg.beta2), weight_decay=tcfg.weight_decay)
@@ -107,6 +106,9 @@ def main():
         print(f"[mllm] resumed from step {start_step}", flush=True)
 
     batch_seqs = max(1, tcfg.batch_tokens // tcfg.seq_len // max(1, tcfg.grad_accum))
+    print(f"[mllm] microbatch={batch_seqs} sequences x {tcfg.seq_len} tokens "
+          f"grad_accum={tcfg.grad_accum} checkpoint={tcfg.grad_checkpoint} "
+          f"compile={tcfg.compile}", flush=True)
     if args.dry:
         def fake_stream():
             rng = random.Random(0)
@@ -127,6 +129,8 @@ def main():
         for pg in opt.param_groups:
             pg["lr"] = lr
         opt.zero_grad(set_to_none=True)
+        if device.type == "cuda":
+            torch.cuda.reset_peak_memory_stats(device)
         acc_loss = 0.0
         for _ in range(max(1, tcfg.grad_accum)):
             try:
@@ -139,17 +143,25 @@ def main():
                 loss = out["loss"] / max(1, tcfg.grad_accum)
             scaler.scale(loss).backward()
             acc_loss += loss.item() * max(1, tcfg.grad_accum)
+            # Do not retain the previous microbatch's vocabulary logits while
+            # allocating the next forward pass (or during evaluation).
+            del out, loss, xb, yb
         scaler.unscale_(opt)
         torch.nn.utils.clip_grad_norm_(model.parameters(), tcfg.grad_clip)
         scaler.step(opt)
         scaler.update()
         tokens_done += tcfg.batch_tokens
 
-        if (step + 1) % tcfg.log_every == 0:
+        if step == start_step or (step + 1) % tcfg.log_every == 0:
             dt = time.time() - t0
             tps = tokens_done / max(1e-6, dt)
-            print(f"[mllm] step={step+1}/{tcfg.steps()} loss={acc_loss:.3f} lr={lr:.2e} "
-                  f"tok={tokens_done/1e9:.2f}B tok/s={tps:.0f}", flush=True)
+            memory = ""
+            if device.type == "cuda":
+                memory = (f" peak_alloc={torch.cuda.max_memory_allocated(device)/2**30:.2f}GiB"
+                          f" peak_reserved={torch.cuda.max_memory_reserved(device)/2**30:.2f}GiB")
+            print(f"[mllm] step={step+1}/{tcfg.steps()} "
+                  f"loss={acc_loss / max(1, tcfg.grad_accum):.3f} lr={lr:.2e} "
+                  f"tok={tokens_done/1e9:.2f}B tok/s={tps:.0f}{memory}", flush=True)
 
         if (step + 1) % tcfg.eval_every == 0 and not args.dry:
             try:

@@ -68,7 +68,7 @@ python -m pytest tests/ -x -q
 # 3. train the 32k tokenizer
 python scripts/train_tokenizer.py --config configs/tokenizer.yaml
 
-# 4. launch pretraining (single DGX Spark, torch.compile + SDPA flash)
+# 4. launch pretraining (single DGX Spark, checkpointing + small microbatches)
 bash scripts/train.sh configs/150m.yaml pretrain
 
 # 5. build the knowledge index (Wikipedia)
