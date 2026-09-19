@@ -31,15 +31,15 @@ PRETRAIN_MIX: List[MixItem] = [
     MixItem("HuggingFaceTB/cosmopedia", "web_samples_v2", "text", 0.15, "synthetic textbooks (Phi-style)"),
     MixItem("HuggingFaceTB/smollm-corpus", "cosmopedia-v2", "text", 0.05, "stories+textbooks"),
     MixItem("open-web-math/open-web-math", None, "text", 0.05, "math reasoning"),
-    MixItem("bigcode/starcoderdata", "python", "content", 0.05, "code, light dose"),
+    MixItem("bigcode/starcoderdata", "default", "content", 0.05, "code, light dose"),
 ]
 
 ANNEAL_MIX: List[MixItem] = [
     MixItem("HuggingFaceTB/cosmopedia", "web_samples_v2", "text", 0.30, "textbook quality"),
     MixItem("HuggingFaceFW/fineweb-edu", None, "text", 0.30, "edu web"),
-    MixItem("HuggingFaceTB/smollm-corpus", "smoltalk", "text", 0.20, "conversational pretrain"),
+    MixItem("HuggingFaceTB/smoltalk", "everyday-conversations", "text", 0.20, "conversational pretrain"),
     MixItem("open-web-math/open-web-math", None, "text", 0.10, "math"),
-    MixItem("bigcode/starcoderdata", "python", "content", 0.10, "code"),
+    MixItem("bigcode/starcoderdata", "default", "content", 0.10, "code"),
 ]
 
 SFT_SOURCES: List[str] = [

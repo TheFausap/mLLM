@@ -18,7 +18,7 @@ sources:
     field: messages
     n: 50000
   - hf: bigcode/starcoderdata
-    name: python
+    name: default
     field: content
     n: 30000
   - hf: open-web-math/open-web-math
